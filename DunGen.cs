@@ -29,17 +29,17 @@ public class DunGen {
 
   Dictionary<string, string> opposite = new Dictionary<string, string>() {
     {"north", "south" },
-    
+
     {"west", "east" },
     {"east", "west" }
   };
 
   Hashtable defaultOpts = new Hashtable() {
-    {"n_rows", 39 },
-    {"n_cols", 39 },
+    {"n_rows", 59 },
+    {"n_cols", 59 },
     {"dungeon_layout", "None" },
-    {"room_min", 5 },
-    {"room_max", 9 },
+    {"room_min", 9 },
+    {"room_max", 17 },
     {"room_layout", "Scattered" },
     {"corridor_layout", "Bent" },
     {"remove_deadends", 100 },
@@ -90,6 +90,7 @@ public class DunGen {
     cells = new TileType[n_rows+1, n_cols+1];
     cells = InitCells(cells);
     cells = PackRooms(cells);
+    cells = OpenRooms(cells, rooms);
 
     Debug.Log (cells);
 
@@ -275,7 +276,105 @@ public class DunGen {
 
   TileType[,] OpenRoom (TileType[,] _cells, Hashtable room) {
 
+    var sills = DoorSills(_cells, room);
+//    int n_opens = AllocateOpens(_cells, room);
+    int n_opens = Random.Range (1, 3);
+
+    for (var i = 0; i < n_opens; i++) {
+      var rand = Random.Range (0, sills.Count-1);
+      var sill = sills[rand];
+      var door_r = (int)sill["door_r"];
+      var door_c = (int)sill["door_c"];
+      _cells[door_r, door_c] = TileType.Door;
+    }
+
     return _cells;
+  }
+
+  List<Hashtable> DoorSills (TileType[,] _cells, Hashtable room) {
+
+    var list = new List<Hashtable>();
+
+    if ((int)room["north"] >= 3) {
+      for (var c = (int)room["west"]; c <= (int)room["east"]; c += 2) {
+        var sill = CheckSill(_cells, room, (int)room["north"], c, "north");
+        if (sill != null) {
+          list.Add(sill);
+        }
+      }
+    }
+
+    if ((int)room["south"] <= (n_rows - 3)) {
+      for (var c = (int)room["west"]; c <= (int)room["east"]; c += 2) {
+        var sill = CheckSill(_cells, room, (int)room["south"], c, "south");
+        if (sill != null) {
+          list.Add(sill);
+        }
+      }
+    }
+
+    if ((int)room["west"] >= 3) {
+      for (var r = (int)room["north"]; r <= (int)room["south"]; r += 2) {
+        var sill = CheckSill(_cells, room, r, (int)room["west"], "west");
+        if (sill != null) {
+          list.Add(sill);
+        }
+      }
+    }
+
+    if ((int)room["east"] <= n_cols - 3) {
+      for (var r = (int)room["north"]; r <= (int)room["south"]; r+= 2) {
+        var sill = CheckSill(_cells, room, r, (int)room["east"], "east");
+        if (sill != null) {
+          list.Add(sill);
+        }
+      }
+    }
+
+    return list;
+  }
+
+  Hashtable CheckSill (TileType[,] _cells, Hashtable room, int sill_r, int sill_c, string dir) {
+
+    var door_r = sill_r + di[dir];
+    var door_c = sill_c + dj[dir];
+
+    var door_cell = _cells[door_r, door_c];
+    if (door_cell != TileType.Perimeter) {
+      return null;
+    }
+
+    var out_r = door_r + di[dir];
+    var out_c = door_c + dj[dir];
+    var out_cell = _cells[out_r, out_c];
+    if (out_cell == TileType.Blocked) {
+      return null;
+    }
+
+    if (out_cell == TileType.Room) {
+      // get the room id of the cell and
+      // return null if out is into the same room
+    }
+
+    var sill = new Hashtable() {
+      {"sill_r", sill_r},
+      {"sill_c", sill_c},
+      {"dir", dir},
+      {"door_r", door_r},
+      {"door_c", door_c},
+      {"out_id", 0} // temp
+    };
+
+    return sill;
+  }
+
+  int AllocateOpens (TileType[,] _cells, Hashtable room) {
+
+    var room_h = (((int)room["south"] - (int)room["north"]) / 2) + 1;
+    var room_w = (((int)room["east"] - (int)room["west"]) / 2) + 1;
+    var f = (int)Mathf.Sqrt((float)room_w * (float)room_h);
+
+    return (f + (int)Random.Range(0, f));
   }
 
   int[,] LabelRooms (int[,] _cells) {
