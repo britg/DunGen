@@ -570,7 +570,12 @@ public class DunGen {
 
     for (var r = r1; r <= r2; r++) {
       for (var c = c1; c <= c2; c++) {
-        _cells[r,c] = TileType.Corridor;
+        //if (_cells[r,c] != TileType.Room
+        //    && _cells[r,c] != TileType.Door
+        //    && _cells[r,c] != TileType.Entrance) {
+
+          _cells[r,c] = TileType.Corridor;
+        //}
       }
     }
 
@@ -635,7 +640,6 @@ public class DunGen {
         var cr = c + recurseList[0,1];
 
         if (_cells.GetLength(0) > rr && _cells.GetLength(1) > cr) {
-          Debug.Log ("Recursing " + rr + "," + cr);
           _cells = Collapse (_cells, rr, cr);
         }
       }
