@@ -13,10 +13,8 @@ Still in the process of porting.
 ### Usage
 
 ```
-	var dungen = new DunGen();
-	# Coming Soon:
-	# Pass config opts
-	DunGen.TileType[,] tiles = dungen.CreateDungeon();
+	var floor = new DunGen.Floor();
+	DunGen.TileType[,] = floor.GenerateTiles();
 
 ```
 
@@ -28,3 +26,4 @@ Tiles is a two dimensional array of `DunGen.TileType`. Possible `TileType`s:
 - Perimeter - margin around a room
 - Entrance - space before a door in the direction it 'opens'
 
+Note that `Corridor` cells can cut through rooms.
