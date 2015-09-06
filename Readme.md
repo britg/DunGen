@@ -13,9 +13,10 @@ Still in the process of porting.
 ### Usage
 
 ```csharp
-	var floor = new DunGen.Floor();
-	DunGen.TileType[,] tiles = floor.GenerateTiles();
-
+	var floor = DunGen.Floor.Create();
+	// floor.tiles -> DunGen.TileType[,]
+	// floor.doors -> List<DunGen.Door>
+	// floor.rooms -> List<DunGen.Room>
 ```
 
 Tiles is a two dimensional array of `DunGen.TileType`. Possible `TileType`s:

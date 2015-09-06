@@ -48,7 +48,7 @@ namespace DunGen {
       }}
     };
 
-    Hashtable defaultOpts = new Hashtable() {
+    static Hashtable defaultOpts = new Hashtable() {
     {"seed", (int)Time.time},
     {"n_rows", 79 },
     {"n_cols", 79 },
@@ -83,6 +83,16 @@ namespace DunGen {
     List<Vector2> cachedDoors = new List<Vector2>();
     List<Vector2> cachedEntrances = new List<Vector2>();
     List<Vector2> doorToRoomCache = new List<Vector2>();
+
+    public static Floor Create () {
+      return Create(defaultOpts);
+    }
+
+    public static Floor Create (Hashtable _opts) {
+      var floor = new Floor();
+      floor.Generate(_opts);
+      return floor;
+    }
 
     public TileType[,] Generate () {
       return Generate(defaultOpts);
