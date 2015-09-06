@@ -12,9 +12,9 @@ Still in the process of porting.
 
 ### Usage
 
-```
+```csharp
 	var floor = new DunGen.Floor();
-	DunGen.TileType[,] = floor.GenerateTiles();
+	DunGen.TileType[,] tiles = floor.GenerateTiles();
 
 ```
 
@@ -27,3 +27,4 @@ Tiles is a two dimensional array of `DunGen.TileType`. Possible `TileType`s:
 - Entrance - space before a door in the direction it 'opens'
 
 Note that `Corridor` cells can cut through rooms.
+
