@@ -29,3 +29,8 @@ Tiles is a two dimensional array of `DunGen.TileType`. Possible `TileType`s:
 
 Note that `Corridor` cells can cut through rooms.
 
+### Example output
+
+Rendered using cubes in Unity3D
+
+![example layout](https://raw.github.com/britg/DunGen/example.jpg)
