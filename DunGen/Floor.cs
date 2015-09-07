@@ -156,10 +156,10 @@ namespace DunGen {
             continue;
           }
 
-          Hashtable proto = new Hashtable() {
-          {"i", i }, {"j", j }
-        };
-          _tiles = PlaceRoom(_tiles, proto);
+          var roomFootprint = new RoomFootprint();
+          roomFootprint.row = i;
+          roomFootprint.col = j;
+          _tiles = PlaceRoom(_tiles, roomFootprint);
 
         }
       }
@@ -167,14 +167,14 @@ namespace DunGen {
       return _tiles;
     }
 
-    TileType[,] PlaceRoom (TileType[,] _tiles, Hashtable proto) {
+    TileType[,] PlaceRoom (TileType[,] _tiles, RoomFootprint roomFootprint) {
 
-      proto = SetRoom(proto);
+      roomFootprint = SetRoom(roomFootprint);
 
-      var r1 = ((int)proto["i"] * 2) + 1;
-      var c1 = ((int)proto["j"] * 2) + 1;
-      var r2 = (((int)proto["i"] + (int)proto["height"]) * 2) - 1;
-      var c2 = (((int)proto["j"] + (int)proto["width"]) * 2) - 1;
+      var r1 = (roomFootprint.row * 2) + 1;
+      var c1 = (roomFootprint.col * 2) + 1;
+      var r2 = ((roomFootprint.row + roomFootprint.height) * 2) - 1;
+      var c2 = ((roomFootprint.col + roomFootprint.width) * 2) - 1;
 
       if (r1 < 1 || r2 > max_row) {
         return _tiles;
@@ -240,50 +240,50 @@ namespace DunGen {
       return _tiles;
     }
 
-    Hashtable SetRoom (Hashtable _proto) {
+    RoomFootprint SetRoom (RoomFootprint roomFootprint) {
 
-      bool heightDefined = _proto.ContainsKey("height");
-      bool widthDefined = _proto.ContainsKey("width");
-      bool iDefined = _proto.ContainsKey("i");
-      bool jDefined = _proto.ContainsKey("j");
+      bool heightDefined = roomFootprint.height != 0;
+      bool widthDefined = roomFootprint.width != 0;
+      bool rowDefined = roomFootprint.row != 0;
+      bool colDefined = roomFootprint.col != 0;
 
       if (!heightDefined) {
-        if (iDefined) {
-          var a = n_i - room_base - (int)_proto["i"];
+        if (rowDefined) {
+          var a = n_i - room_base - roomFootprint.row;
           if (a < 0) {
             a = 0;
           }
 
           var r = (a < room_radix) ? a : room_radix;
-          _proto["height"] = (int)Random.Range(0, r) + room_base;
+          roomFootprint.height = (int)Random.Range(0, r) + room_base;
         } else {
-          _proto["height"] = (int)Random.Range(0, room_radix) + room_base;
+          roomFootprint.height = (int)Random.Range(0, room_radix) + room_base;
         }
       }
 
       if (!widthDefined) {
-        if (jDefined) {
-          var a = n_j - room_base - (int)_proto["j"];
+        if (colDefined) {
+          var a = n_j - room_base - roomFootprint.col;
           if (a < 0) {
             a = 0;
           }
 
           var r = (a < room_radix) ? a : room_radix;
-          _proto["width"] = (int)Random.Range(0, r) + room_base;
+          roomFootprint.width = (int)Random.Range(0, r) + room_base;
         } else {
-          _proto["width"] = (int)Random.Range(0, room_radix) + room_base;
+          roomFootprint.width = (int)Random.Range(0, room_radix) + room_base;
         }
       }
 
-      if (!iDefined) {
-        _proto["i"] = Random.Range(0, n_i - (int)_proto["height"]);
+      if (!rowDefined) {
+        roomFootprint.row = Random.Range(0, n_i - roomFootprint.height);
       }
 
-      if (!jDefined) {
-        _proto["j"] = Random.Range(0, n_j - (int)_proto["width"]);
+      if (!colDefined) {
+        roomFootprint.col = Random.Range(0, n_j - roomFootprint.width);
       }
 
-      return _proto;
+      return roomFootprint;
     }
 
     bool RoomCollision (TileType[,] _tiles, int r1, int c1, int r2, int c2) {
