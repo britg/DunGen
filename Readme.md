@@ -33,4 +33,4 @@ Note that `Corridor` cells can cut through rooms.
 
 Rendered using cubes in Unity3D
 
-![example layout](https://raw.github.com/britg/DunGen/example.jpg)
+![example layout](https://raw.githubusercontent.com/britg/DunGen/master/example.jpg)
