@@ -5,7 +5,6 @@ using System.Collections.Generic;
 namespace DunGen {
   public class Floor {
 
-    int[,] dungeonLayout = new int[,] { { 1, 1, 1, }, { 1, 0, 1 }, { 1, 1, 1 } };
     int corridorLayout = 50;
 
     Dictionary<MapDirection, int> di = new Dictionary<MapDirection, int>() {
@@ -67,7 +66,7 @@ namespace DunGen {
     {"room_min", 9 },
     {"room_max", 17 },
     {"room_layout", "Packed" },
-    {"corridor_layout", "Bent" },
+    {"corridor_change_chance", 50 },
     {"remove_deadends", 100 },
     {"add_stairs", 2 },
     {"map_style", "Standard" },
@@ -503,7 +502,7 @@ namespace DunGen {
       var copy = new List<MapDirection>(dj_dirs);
       var dirs = (List<MapDirection>)Shuffle(copy);
 
-      if (RollPercent(corridorLayout)) {
+      if (RollPercent((int)opts["corridor_change_chance"])) {
         dirs.Insert(0, lastDirection);
       }
 
