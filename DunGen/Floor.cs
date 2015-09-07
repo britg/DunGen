@@ -8,40 +8,51 @@ namespace DunGen {
     int[,] dungeonLayout = new int[,] { { 1, 1, 1, }, { 1, 0, 1 }, { 1, 1, 1 } };
     int corridorLayout = 50;
 
-    Dictionary<string, int> di = new Dictionary<string, int>() {
-    { "north", -1 }, { "south", 1 }, {"west", 0 }, {"east", 0 }
-  };
+    Dictionary<MapDirection, int> di = new Dictionary<MapDirection, int>() {
+      { MapDirection.North, -1 },
+      { MapDirection.South, 1 },
+      { MapDirection.West, 0 },
+      { MapDirection.East, 0 }
+    };
 
-    Dictionary<string, int> dj = new Dictionary<string, int>() {
-    { "north", 0 }, { "south", 0 }, {"west", -1 }, {"east", 1 }
-  };
+    Dictionary<MapDirection, int> dj = new Dictionary<MapDirection, int>() {
+      { MapDirection.North, 0 },
+      { MapDirection.South, 0 },
+      { MapDirection.West, -1 },
+      { MapDirection.East, 1 }
+    };
 
-    List<string> dj_dirs = new List<string>() { "north", "south", "west", "east" };
+    List<MapDirection> dj_dirs = new List<MapDirection>() {
+      MapDirection.North,
+      MapDirection.South,
+      MapDirection.West,
+      MapDirection.East
+    };
 
-    Dictionary<string, string> opposite = new Dictionary<string, string>() {
-    {"north", "south" },
-    {"south", "north" },
-    {"west", "east" },
-    {"east", "west" }
-  };
+    Dictionary<MapDirection, MapDirection> opposite = new Dictionary<MapDirection, MapDirection>() {
+      {MapDirection.North, MapDirection.South },
+      {MapDirection.South, MapDirection.North },
+      {MapDirection.West, MapDirection.East },
+      {MapDirection.East, MapDirection.West }
+    };
 
-    Dictionary<string, Dictionary<string, int[,]>> close_end = new Dictionary<string, Dictionary<string, int[,]>>() {
-    { "north", new Dictionary<string, int[,]>() {
+    Dictionary<MapDirection, Dictionary<string, int[,]>> close_end = new Dictionary<MapDirection, Dictionary<string, int[,]>>() {
+    { MapDirection.North, new Dictionary<string, int[,]>() {
         { "walled", new int[,]{{0,-1},{1,-1},{1,0},{1,1},{0,1}} },
         { "close", new int[,]{{0,0}} },
         { "recurse", new int[,]{{-1, 0}} }
       } },
-    { "south", new Dictionary<string, int[,]>() {
+    { MapDirection.South, new Dictionary<string, int[,]>() {
         { "walled", new int[,]{{0,-1},{-1,-1},{-1,0},{-1,1},{0,1}} },
         { "close", new int[,]{{0,0}} },
         { "recurse", new int[,]{{1, 0}} }
       }},
-    { "west", new Dictionary<string, int[,]>() {
+    { MapDirection.West, new Dictionary<string, int[,]>() {
         { "walled", new int[,]{{-1,0},{-1,1},{0,1},{1,1},{1,0}} },
         { "close", new int[,]{{0,0}} },
         { "recurse", new int[,]{{0, -1}} }
       }},
-    { "east", new Dictionary<string, int[,]>() {
+    { MapDirection.East, new Dictionary<string, int[,]>() {
         { "walled", new int[,]{{-1,0},{-1,-1},{0,-1},{1,-1},{1,0}} },
         { "close", new int[,]{{0,0}} },
         { "recurse", new int[,]{{0, 1}} }
@@ -63,8 +74,9 @@ namespace DunGen {
     {"cell_size",  18 }
   };
 
-    TileType[,] tiles;
-    Hashtable rooms;
+    public TileType[,] tiles;
+    public List<Room> rooms;
+
     Hashtable opts;
     int n_i;
     int n_j;
@@ -116,31 +128,30 @@ namespace DunGen {
       room_base = (int)((room_min + 1) / 2);
       room_radix = (int)((room_max - room_min) / 2) + 1;
 
-      rooms = new Hashtable();
+      rooms = new List<Room>();
       roomIdForTile = new int[n_rows + 1, n_cols + 1];
       tiles = new TileType[n_rows + 1, n_cols + 1];
 
-      tiles = InitTiles(tiles);
-      tiles = PackRooms(tiles);
-      tiles = OpenRooms(tiles, rooms);
-      tiles = CreateCorridors(tiles);
-      tiles = Cleanup(tiles);
+      InitTiles();
+      PackRooms();
+      OpenRooms();
+      CreateCorridors();
+      RemoveDeadends();
+      FixDoors();
+      EmptyBlocks();
 
       return tiles;
     }
 
-    TileType[,] InitTiles (TileType[,] _tiles) {
-
+    void InitTiles () {
       for (var r = 0; r <= n_rows; r++) {
         for (var c = 0; c <= n_cols; c++) {
-          _tiles[r, c] = TileType.Nothing;
+          tiles[r, c] = TileType.Nothing;
         }
       }
-
-      return _tiles;
     }
 
-    TileType[,] PackRooms (TileType[,] _tiles) {
+    void PackRooms () {
 
       for (var i = 0; i < n_i; i++) {
         var r = (i * 2) + 1;
@@ -148,7 +159,7 @@ namespace DunGen {
         for (var j = 0; j < n_j; j++) {
           var c = (j * 2) + 1;
 
-          if (_tiles[r, c] == TileType.Room) {
+          if (tiles[r, c] == TileType.Room) {
             continue;
           }
 
@@ -159,15 +170,12 @@ namespace DunGen {
           var roomFootprint = new RoomFootprint();
           roomFootprint.row = i;
           roomFootprint.col = j;
-          _tiles = PlaceRoom(_tiles, roomFootprint);
-
+          PlaceRoom(roomFootprint);
         }
       }
-
-      return _tiles;
     }
 
-    TileType[,] PlaceRoom (TileType[,] _tiles, RoomFootprint roomFootprint) {
+    void PlaceRoom (RoomFootprint roomFootprint) {
 
       roomFootprint = SetRoom(roomFootprint);
 
@@ -177,16 +185,16 @@ namespace DunGen {
       var c2 = ((roomFootprint.col + roomFootprint.width) * 2) - 1;
 
       if (r1 < 1 || r2 > max_row) {
-        return _tiles;
+        return;
       }
 
       if (c1 < 1 || c2 > max_col) {
-        return _tiles;
+        return;
       }
 
-      bool hit = RoomCollision(_tiles, r1, c1, r2, c2);
+      bool hit = RoomCollision(r1, c1, r2, c2);
       if (hit) {
-        return _tiles;
+        return;
       }
 
       int room_id = ++n_rooms;
@@ -194,50 +202,47 @@ namespace DunGen {
 
       for (var r = r1; r <= r2; r++) {
         for (var c = c1; c <= c2; c++) {
-          if (_tiles[r, c] == TileType.Entrance) {
+          if (tiles[r, c] == TileType.Entrance) {
             //          _tiles[r, c] &= ~ ESPACE;
-          } else if (_tiles[r, c] == TileType.Perimeter) {
+          } else if (tiles[r, c] == TileType.Perimeter) {
 
           } else {
-            _tiles[r, c] = TileType.Room;
+            tiles[r, c] = TileType.Room;
             roomIdForTile[r, c] = room_id;
           }
         }
       }
 
-      var room = new Hashtable() {
-      {"id", room_id}, {"row", r1}, {"col", c1},
-      {"north", r1}, {"south", r2}, {"west", c1}, {"east", c2},
-      {"doors", new Dictionary<string, List<Hashtable>>() {
-          {"north", new List<Hashtable>()},
-          {"south", new List<Hashtable>()},
-          {"west", new List<Hashtable>()},
-          {"east", new List<Hashtable>()}
-        } }
-    };
+      var room = new Room();
+      room.id = room_id;
+      room.row = r1;
+      room.col = c1;
+      room.northRow = r1;
+      room.southRow = r2;
+      room.westCol = c1;
+      room.eastCol = c2;
+      room.doors = new List<Door>();
 
-      rooms[room_id] = room;
+      rooms.Add(room);
 
       // Perimeters
       for (var r = r1 - 1; r <= r2 + 1; r++) {
-        if (_tiles[r, c1 - 1] != TileType.Room && _tiles[r, c1 - 1] != TileType.Entrance) {
-          _tiles[r, c1 - 1] = TileType.Perimeter;
+        if (tiles[r, c1 - 1] != TileType.Room && tiles[r, c1 - 1] != TileType.Entrance) {
+          tiles[r, c1 - 1] = TileType.Perimeter;
         }
-        if (_tiles[r, c2 + 1] != TileType.Room && _tiles[r, c2 + 1] != TileType.Entrance) {
-          _tiles[r, c2 + 1] = TileType.Perimeter;
+        if (tiles[r, c2 + 1] != TileType.Room && tiles[r, c2 + 1] != TileType.Entrance) {
+          tiles[r, c2 + 1] = TileType.Perimeter;
         }
       }
 
       for (var c = c1 - 1; c <= c2 + 1; c++) {
-        if (_tiles[r1 - 1, c] != TileType.Room && _tiles[r1 - 1, c] != TileType.Entrance) {
-          _tiles[r1 - 1, c] = TileType.Perimeter;
+        if (tiles[r1 - 1, c] != TileType.Room && tiles[r1 - 1, c] != TileType.Entrance) {
+          tiles[r1 - 1, c] = TileType.Perimeter;
         }
-        if (_tiles[r2 + 1, c] != TileType.Room && _tiles[r2 + 1, c] != TileType.Entrance) {
-          _tiles[r2 + 1, c] = TileType.Perimeter;
+        if (tiles[r2 + 1, c] != TileType.Room && tiles[r2 + 1, c] != TileType.Entrance) {
+          tiles[r2 + 1, c] = TileType.Perimeter;
         }
       }
-
-      return _tiles;
     }
 
     RoomFootprint SetRoom (RoomFootprint roomFootprint) {
@@ -286,16 +291,15 @@ namespace DunGen {
       return roomFootprint;
     }
 
-    bool RoomCollision (TileType[,] _tiles, int r1, int c1, int r2, int c2) {
-
+    bool RoomCollision (int r1, int c1, int r2, int c2) {
       for (int r = r1; r <= r2; r++) {
         for (int c = c1; c <= c2; c++) {
 
-          if (_tiles[r, c] == TileType.Blocked) {
+          if (tiles[r, c] == TileType.Blocked) {
             return true;
           }
 
-          if (_tiles[r, c] == TileType.Room) {
+          if (tiles[r, c] == TileType.Room) {
             return true;
           }
         }
@@ -304,20 +308,15 @@ namespace DunGen {
       return false;
     }
 
-    TileType[,] OpenRooms (TileType[,] _tiles, Hashtable _rooms) {
-
-      foreach (DictionaryEntry entry in _rooms) {
-        var room = (Hashtable)entry.Value;
-
-        _tiles = OpenRoom(_tiles, room);
+    void OpenRooms () {
+      foreach (Room room in rooms) {
+        OpenRoom(room);
       }
-
-      return _tiles;
     }
 
-    TileType[,] OpenRoom (TileType[,] _tiles, Hashtable room) {
+    void OpenRoom (Room room) {
 
-      var sills = DoorSills(_tiles, room);
+      var sills = DoorSills(room);
       // int n_opens = AllocateOpens(_tiles, room);
       // int n_opens = Random.Range (1, 3);
       int n_opens = 2;
@@ -325,18 +324,18 @@ namespace DunGen {
       for (var i = 0; i < n_opens; i++) {
         var rand = Random.Range(0, sills.Count - 1);
         var sill = sills[rand];
-        var door_r = (int)sill["door_r"];
-        var door_c = (int)sill["door_c"];
-        var door_cell = _tiles[door_r, door_c];
+        var door_r = sill.doorRow;
+        var door_c = sill.doorCol;
+        var door_cell = tiles[door_r, door_c];
 
         if (door_cell == TileType.Door) {
           --i;
           continue;
         }
 
-        var out_id = (int)sill["out_id"];
+        var out_id = sill.outRoomId;
         if (out_id > 0) {
-          List<int> keyOrder = new List<int>() { (int)room["id"], out_id };
+          List<int> keyOrder = new List<int>() { room.id, out_id };
           keyOrder.Sort();
           var key = string.Format("{0},{1}", keyOrder[0], keyOrder[1]);
           if (roomConnections.ContainsKey(key)) {
@@ -348,64 +347,63 @@ namespace DunGen {
           }
         }
 
-        var open_r = (int)sill["sill_r"];
-        var open_c = (int)sill["sill_c"];
-        string open_dir = (string)sill["dir"];
+        var open_r = sill.row;
+        var open_c = sill.col;
+        MapDirection open_dir = sill.dir;
 
         for (var x = 0; x < 3; x++) {
           var r = open_r + (di[open_dir] * x);
           var c = open_c + (dj[open_dir] * x);
-          _tiles[r, c] = TileType.Entrance;
+          tiles[r, c] = TileType.Entrance;
         }
 
-        _tiles[door_r, door_c] = TileType.Door;
-        var door = new Hashtable();
-        door["row"] = door_r;
-        door["col"] = door_c;
-        if (out_id > 0) {
-          door["out_id"] = out_id;
-        }
+        tiles[door_r, door_c] = TileType.Door;
 
-        ((Dictionary<string, List<Hashtable>>)room["doors"])[open_dir].Add(door);
+        var door = new Door();
+        door.row = door_r;
+        door.col = door_c;
+        door.outRoomId = out_id;
+        door.openDir = open_dir;
+        door.sill = sill;
+
+        room.doors.Add(door);
       }
-
-      return _tiles;
     }
 
-    List<Hashtable> DoorSills (TileType[,] _tiles, Hashtable room) {
+    List<DoorSill> DoorSills (Room room) {
 
-      var list = new List<Hashtable>();
+      var list = new List<DoorSill>();
 
-      if ((int)room["north"] >= 3) {
-        for (var c = (int)room["west"]; c <= (int)room["east"]; c += 2) {
-          var sill = CheckSill(_tiles, room, (int)room["north"], c, "north");
+      if (room.northRow >= 3) {
+        for (var c = room.westCol; c <= room.eastCol; c += 2) {
+          var sill = CheckSill(room, room.northRow, c, MapDirection.North);
           if (sill != null) {
             list.Add(sill);
           }
         }
       }
 
-      if ((int)room["south"] <= (n_rows - 3)) {
-        for (var c = (int)room["west"]; c <= (int)room["east"]; c += 2) {
-          var sill = CheckSill(_tiles, room, (int)room["south"], c, "south");
+      if (room.southRow <= (n_rows - 3)) {
+        for (var c = room.westCol; c <= room.eastCol; c += 2) {
+          var sill = CheckSill(room, room.southRow, c, MapDirection.South);
           if (sill != null) {
             list.Add(sill);
           }
         }
       }
 
-      if ((int)room["west"] >= 3) {
-        for (var r = (int)room["north"]; r <= (int)room["south"]; r += 2) {
-          var sill = CheckSill(_tiles, room, r, (int)room["west"], "west");
+      if (room.westCol >= 3) {
+        for (var r = room.northRow; r <= room.southRow; r += 2) {
+          var sill = CheckSill(room, r, room.westCol, MapDirection.West);
           if (sill != null) {
             list.Add(sill);
           }
         }
       }
 
-      if ((int)room["east"] <= n_cols - 3) {
-        for (var r = (int)room["north"]; r <= (int)room["south"]; r += 2) {
-          var sill = CheckSill(_tiles, room, r, (int)room["east"], "east");
+      if (room.eastCol <= n_cols - 3) {
+        for (var r = room.northRow; r <= room.southRow; r += 2) {
+          var sill = CheckSill(room, r, room.eastCol, MapDirection.East);
           if (sill != null) {
             list.Add(sill);
           }
@@ -415,19 +413,19 @@ namespace DunGen {
       return list;
     }
 
-    Hashtable CheckSill (TileType[,] _tiles, Hashtable room, int sill_r, int sill_c, string dir) {
+    DoorSill CheckSill (Room room, int sill_r, int sill_c, MapDirection dir) {
 
       var door_r = sill_r + di[dir];
       var door_c = sill_c + dj[dir];
 
-      var door_cell = _tiles[door_r, door_c];
+      var door_cell = tiles[door_r, door_c];
       if (door_cell != TileType.Perimeter) {
         return null;
       }
 
       var out_r = door_r + di[dir];
       var out_c = door_c + dj[dir];
-      var out_cell = _tiles[out_r, out_c];
+      var out_cell = tiles[out_r, out_c];
       if (out_cell == TileType.Blocked) {
         return null;
       }
@@ -437,77 +435,82 @@ namespace DunGen {
         // get the room id of the cell and
         // return null if out is into the same room
         out_id = roomIdForTile[out_r, out_c];
-        if (out_id == (int)room["id"]) {
+        if (out_id == room.id) {
           return null;
         }
       }
 
-      var sill = new Hashtable() {
-      {"sill_r", sill_r},
-      {"sill_c", sill_c},
-      {"dir", dir},
-      {"door_r", door_r},
-      {"door_c", door_c},
-      {"out_id", out_id} // temp
-    };
-
+      var sill = new DoorSill();
+      sill.row = sill_r;
+      sill.col = sill_c;
+      sill.dir = dir;
+      sill.doorRow = door_r;
+      sill.doorCol = door_c;
+      sill.outRoomId = out_id;
+      
       return sill;
     }
 
-    int AllocateOpens (TileType[,] _tiles, Hashtable room) {
-
-      var room_h = (((int)room["south"] - (int)room["north"]) / 2) + 1;
-      var room_w = (((int)room["east"] - (int)room["west"]) / 2) + 1;
-      var f = (int)Mathf.Sqrt((float)room_w * (float)room_h);
-
-      return (f + (int)Random.Range(0, f));
-    }
-
-    TileType[,] CreateCorridors (TileType[,] _tiles) {
+    void CreateCorridors () {
 
       for (var i = 1; i < n_i; i++) {
         var r = (i * 2) + 1;
         for (var j = 1; j < n_j; j++) {
           var c = (j * 2) + 1;
 
-          if (_tiles[r, c] == TileType.Corridor) {
+          if (tiles[r, c] == TileType.Corridor) {
             continue;
           }
 
-          _tiles = CreateTunnel(_tiles, i, j, null);
+          CreateTunnel(i, j, MapDirection.North);
         }
       }
-      return _tiles;
     }
 
-    TileType[,] CreateTunnel (TileType[,] _tiles, int i, int j, string last_dir) {
-      var dirs = TunnelDirections(_tiles, last_dir);
+    void CreateTunnel (int i, int j) {
+      var dirs = TunnelDirections();
 
-      foreach (string dir in dirs) {
-        if (OpenTunnel(ref _tiles, i, j, dir)) {
+      foreach (MapDirection dir in dirs) {
+        if (OpenTunnel(i, j, dir)) {
           var next_i = i + di[dir];
           var next_j = j + dj[dir];
 
-          _tiles = CreateTunnel(_tiles, next_i, next_j, last_dir);
+          CreateTunnel(next_i, next_j, dir);
         }
       }
-
-      return _tiles;
     }
 
-    List<string> TunnelDirections (TileType[,] _tiles, string lastDirection) {
-      var dirs = (List<string>)Shuffle(dj_dirs);
+    void CreateTunnel (int i, int j, MapDirection last_dir) {
+      var dirs = TunnelDirections(last_dir);
 
-      if (lastDirection != null) {
-        if (tpd.RollPercent(corridorLayout)) {
-          dirs.Insert(0, lastDirection);
+      foreach (MapDirection dir in dirs) {
+        if (OpenTunnel(i, j, dir)) {
+          var next_i = i + di[dir];
+          var next_j = j + dj[dir];
+
+          CreateTunnel(next_i, next_j, last_dir);
         }
+      }
+    }
+
+    List<MapDirection> TunnelDirections () {
+      var copy = new List<MapDirection>(dj_dirs);
+      var dirs = (List<MapDirection>)Shuffle(copy);
+      return dirs;
+    }
+
+    List<MapDirection> TunnelDirections (MapDirection lastDirection) {
+      var copy = new List<MapDirection>(dj_dirs);
+      var dirs = (List<MapDirection>)Shuffle(copy);
+
+      if (RollPercent(corridorLayout)) {
+        dirs.Insert(0, lastDirection);
       }
 
       return dirs;
     }
 
-    bool OpenTunnel (ref TileType[,] _tiles, int i, int j, string dir) {
+    bool OpenTunnel (int i, int j, MapDirection dir) {
       var this_r = (i * 2) + 1;
       var this_c = (j * 2) + 1;
       var next_r = ((i + di[dir]) * 2) + 1;
@@ -515,15 +518,15 @@ namespace DunGen {
       var mid_r = (this_r + next_r) / 2;
       var mid_c = (this_c + next_c) / 2;
 
-      if (SoundTunnel(_tiles, mid_r, mid_c, next_r, next_c)) {
-        _tiles = DelveTunnel(_tiles, this_r, this_c, next_r, next_c);
+      if (SoundTunnel(mid_r, mid_c, next_r, next_c)) {
+        DelveTunnel(this_r, this_c, next_r, next_c);
         return true;
       }
 
       return false;
     }
 
-    bool SoundTunnel (TileType[,] _tiles, int mid_r, int mid_c, int next_r, int next_c) {
+    bool SoundTunnel (int mid_r, int mid_c, int next_r, int next_c) {
 
       if (next_r < 0 || next_r > n_rows) {
         return false;
@@ -545,10 +548,9 @@ namespace DunGen {
 
       for (var r = r1; r <= r2; r++) {
         for (var c = c1; c <= c2; c++) {
-          if (_tiles[r, c] == TileType.Blocked
-              || _tiles[r, c] == TileType.Perimeter
-              || _tiles[r, c] == TileType.Corridor
-              //            || _tiles[r, c] == TileType.Room
+          if (tiles[r, c] == TileType.Blocked
+              || tiles[r, c] == TileType.Perimeter
+              || tiles[r, c] == TileType.Corridor
               ) {
             return false;
           }
@@ -558,7 +560,7 @@ namespace DunGen {
       return true;
     }
 
-    TileType[,] DelveTunnel (TileType[,] _tiles, int this_r, int this_c, int next_r, int next_c) {
+    void DelveTunnel (int this_r, int this_c, int next_r, int next_c) {
 
       var rList = new List<int>() { this_r, next_r };
       rList.Sort();
@@ -572,64 +574,48 @@ namespace DunGen {
 
       for (var r = r1; r <= r2; r++) {
         for (var c = c1; c <= c2; c++) {
-          if (_tiles[r, c] == TileType.Door) {
+          if (tiles[r, c] == TileType.Door) {
             cachedDoors.Add(new Vector2(c, r));
           }
 
-          if (_tiles[r, c] == TileType.Entrance) {
+          if (tiles[r, c] == TileType.Entrance) {
             cachedEntrances.Add(new Vector2(c, r));
           }
 
-          _tiles[r, c] = TileType.Corridor;
+          tiles[r, c] = TileType.Corridor;
         }
       }
-
-      return _tiles;
     }
 
-    int[,] EmplaceStairs (int[,] _tiles) {
-
-      return _tiles;
+    void RemoveDeadends () {
+      CollapseTunnels();
     }
 
-    TileType[,] Cleanup (TileType[,] _tiles) {
-      _tiles = RemoveDeadends(_tiles);
-      _tiles = FixDoors(_tiles);
-      _tiles = EmptyBlocks(_tiles);
-      return _tiles;
-    }
-
-    TileType[,] RemoveDeadends (TileType[,] _tiles) {
-      return CollapseTunnels(_tiles);
-    }
-
-    TileType[,] CollapseTunnels (TileType[,] _tiles) {
+    void CollapseTunnels () {
       for (var i = 0; i < n_i; i++) {
         var r = i * 2 + 1;
         for (var j = 0; j < n_j; j++) {
           var c = j * 2 + 1;
-          var test = _tiles[r, c];
+          var test = tiles[r, c];
           if (test != TileType.Room && test != TileType.Corridor) {
             continue;
           }
 
-          _tiles = Collapse(_tiles, r, c);
+          Collapse(r, c);
         }
       }
-
-      return _tiles;
     }
 
-    TileType[,] Collapse (TileType[,] _tiles, int r, int c) {
+    void Collapse (int r, int c) {
 
-      var test = _tiles[r, c];
+      var test = tiles[r, c];
       if (test != TileType.Room && test != TileType.Corridor) {
-        return _tiles;
+        return;
       }
 
-      foreach (KeyValuePair<string, Dictionary<string, int[,]>> p in close_end) {
+      foreach (KeyValuePair<MapDirection, Dictionary<string, int[,]>> p in close_end) {
 
-        if (CheckTunnel(_tiles, r, c, p.Value)) {
+        if (CheckTunnel(r, c, p.Value)) {
 
           int[,] closeList = p.Value["close"];
 
@@ -637,29 +623,27 @@ namespace DunGen {
             var p1 = closeList[x, 0];
             var p2 = closeList[x, 1];
 
-            _tiles[r + p1, c + p2] = TileType.Nothing;
+            tiles[r + p1, c + p2] = TileType.Nothing;
           }
 
           int[,] recurseList = p.Value["recurse"];
           var rr = r + recurseList[0, 0];
           var cr = c + recurseList[0, 1];
 
-          if (_tiles.GetLength(0) > rr && _tiles.GetLength(1) > cr) {
-            _tiles = Collapse(_tiles, rr, cr);
+          if (tiles.GetLength(0) > rr && tiles.GetLength(1) > cr) {
+            Collapse(rr, cr);
           }
         }
       }
-
-      return _tiles;
     }
 
-    bool CheckTunnel (TileType[,] _tiles, int r, int c, Dictionary<string, int[,]> checkDirection) {
+    bool CheckTunnel (int r, int c, Dictionary<string, int[,]> checkDirection) {
       int[,] list = checkDirection["walled"];
       for (var x = 0; x < list.GetLength(0); x++) {
         var p1 = list[x, 0];
         var p2 = list[x, 1];
 
-        var test = _tiles[r + p1, c + p2];
+        var test = tiles[r + p1, c + p2];
         if (test == TileType.Corridor || test == TileType.Room) {
           return false;
         }
@@ -668,35 +652,32 @@ namespace DunGen {
       return true;
     }
 
-    TileType[,] FixDoors (TileType[,] _tiles) {
+    void FixDoors () {
 
       //doorToRoomCache.AddRange(cachedDoors);
 
       foreach (Vector2 doorPos in cachedDoors) {
-        _tiles[(int)doorPos.y, (int)doorPos.x] = TileType.Door;
+        tiles[(int)doorPos.y, (int)doorPos.x] = TileType.Door;
       }
 
       foreach (Vector2 entrancePos in cachedEntrances) {
-        _tiles[(int)entrancePos.y, (int)entrancePos.x] = TileType.Entrance;
+        tiles[(int)entrancePos.y, (int)entrancePos.x] = TileType.Entrance;
       }
 
-      for (var r = 0; r < _tiles.GetLength(0); r++) {
-        for (var c = 0; c < _tiles.GetLength(1); c++) {
+      for (var r = 0; r < tiles.GetLength(0); r++) {
+        for (var c = 0; c < tiles.GetLength(1); c++) {
           var test = new Vector2(c, r);
-          if (_tiles[r, c] == TileType.Door) {
+          if (tiles[r, c] == TileType.Door) {
             if (!doorToRoomCache.Contains(test)) {
               //_tiles[r, c] = TileType.Nothing;
             }
           }
         }
       }
-
-      return _tiles;
     }
 
-    TileType[,] EmptyBlocks (TileType[,] _tiles) {
-
-      return _tiles;
+    void EmptyBlocks () {
+      // TODO: To implement
     }
 
     public IList<T> Shuffle<T>(IList<T> list) {
@@ -709,6 +690,11 @@ namespace DunGen {
         list[n] = value;
       }
       return list;
+    }
+
+    bool RollPercent (float chance) {
+      float rand = Random.Range(0f, 100f);
+      return rand < chance;
     }
 
   }

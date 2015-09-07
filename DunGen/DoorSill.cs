@@ -7,7 +7,9 @@ namespace DunGen {
     public int row;
     public int col;
     public MapDirection dir;
-
+    public int doorRow;
+    public int doorCol;
+    public int outRoomId;
 
   }
 }

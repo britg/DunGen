@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace DunGen {
   public class Room {
@@ -12,6 +13,7 @@ namespace DunGen {
     public int westCol;
     public int eastCol;
 
+    public List<Door> doors;
 
 
   }
