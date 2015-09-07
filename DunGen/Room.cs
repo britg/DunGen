@@ -13,6 +13,7 @@ namespace DunGen {
     public int westCol;
     public int eastCol;
 
+    public List<Vector3> tiles;
     public List<Door> doors;
 
 

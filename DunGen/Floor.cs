@@ -5,8 +5,6 @@ using System.Collections.Generic;
 namespace DunGen {
   public class Floor {
 
-    int corridorLayout = 50;
-
     Dictionary<MapDirection, int> di = new Dictionary<MapDirection, int>() {
       { MapDirection.North, -1 },
       { MapDirection.South, 1 },
@@ -199,6 +197,8 @@ namespace DunGen {
       int room_id = ++n_rooms;
       last_room_id = room_id;
 
+      var room = new Room();
+      room.tiles = new List<Vector3>();
       for (var r = r1; r <= r2; r++) {
         for (var c = c1; c <= c2; c++) {
           if (tiles[r, c] == TileType.Entrance) {
@@ -208,11 +208,11 @@ namespace DunGen {
           } else {
             tiles[r, c] = TileType.Room;
             roomIdForTile[r, c] = room_id;
+            room.tiles.Add(new Vector3(c, 0f, r));
           }
         }
       }
 
-      var room = new Room();
       room.id = room_id;
       room.row = r1;
       room.col = c1;
