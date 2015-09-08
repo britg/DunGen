@@ -1,6 +1,6 @@
 # DunGen
 
-A simple dungeon floor generator in C#. Inspired by the work of donjon http://donjon.bin.sh/
+A simple dungeon floor generator in C# for Unity3d. Inspired by the work of donjon http://donjon.bin.sh/
 
 ### Scope
 
