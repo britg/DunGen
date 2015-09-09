@@ -15,8 +15,6 @@ namespace DunGen {
 
     public List<Vector3> tiles;
     public List<Door> doors;
-
-
   }
 }
 
