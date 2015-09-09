@@ -56,25 +56,10 @@ namespace DunGen {
       }}
     };
 
-    static Hashtable defaultOpts = new Hashtable() {
-    {"seed", (int)Time.time},
-    {"n_rows", 79 },
-    {"n_cols", 79 },
-    {"dungeon_layout", "None" },
-    {"room_min", 9 },
-    {"room_max", 17 },
-    {"room_layout", "Packed" },
-    {"corridor_change_chance", 50 },
-    {"remove_deadends", 100 },
-    {"add_stairs", 2 },
-    {"map_style", "Standard" },
-    {"cell_size",  18 }
-  };
-
     public TileType[,] tiles;
     public List<Room> rooms;
 
-    Hashtable opts;
+    FloorOptions opts;
     int n_i;
     int n_j;
     int n_rows;
@@ -94,34 +79,34 @@ namespace DunGen {
     List<Vector2> doorToRoomCache = new List<Vector2>();
 
     public static Floor Create () {
-      return Create(defaultOpts);
+      return Create(FloorOptions.defaults);
     }
 
-    public static Floor Create (Hashtable _opts) {
+    public static Floor Create (FloorOptions _opts) {
       var floor = new Floor();
       floor.Generate(_opts);
       return floor;
     }
 
     public TileType[,] Generate () {
-      return Generate(defaultOpts);
+      return Generate(FloorOptions.defaults);
     }
 
-    public TileType[,] Generate (Hashtable _opts) {
+    public TileType[,] Generate (FloorOptions _opts) {
       // TODO: Merge default opts with opts;
-      opts = defaultOpts;
+      opts = _opts;
 
       //Random.seed = (int)opts["seed"];
 
-      n_i = (int)((int)opts["n_rows"] / 2);
-      n_j = (int)((int)opts["n_cols"] / 2);
+      n_i = (int)(opts.numRows / 2);
+      n_j = (int)(opts.numCols / 2);
       n_rows = n_i * 2;
       n_cols = n_j * 2;
       max_row = n_rows - 1;
       max_col = n_cols - 1;
       n_rooms = 0;
-      room_min = (int)opts["room_min"];
-      room_max = (int)opts["room_max"];
+      room_min = opts.roomSizeMin;
+      room_max = opts.roomSizeMax;
       room_base = (int)((room_min + 1) / 2);
       room_radix = (int)((room_max - room_min) / 2) + 1;
 
@@ -502,7 +487,7 @@ namespace DunGen {
       var copy = new List<MapDirection>(dj_dirs);
       var dirs = (List<MapDirection>)Shuffle(copy);
 
-      if (RollPercent((int)opts["corridor_change_chance"])) {
+      if (RollPercent(opts.corridorBendChance)) {
         dirs.Insert(0, lastDirection);
       }
 
