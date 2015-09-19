@@ -183,7 +183,6 @@ namespace DunGen {
       last_room_id = room_id;
 
       var room = new Room();
-      room.tiles = new List<Vector3>();
       for (var r = r1; r <= r2; r++) {
         for (var c = c1; c <= c2; c++) {
           if (tiles[r, c] == TileType.Entrance) {
@@ -193,8 +192,14 @@ namespace DunGen {
           } else {
             tiles[r, c] = TileType.Room;
             roomIdForTile[r, c] = room_id;
-            room.tiles.Add(new Vector3(c, 0f, r));
           }
+        }
+      }
+
+      room.tiles = new List<Vector3>();
+      for (var r = r1-1; r <= r2+1; r++) {
+        for (var c = c1-1; c <= c2+1; c++) {
+          room.tiles.Add(new Vector3(c, 0f, r));
         }
       }
 
@@ -431,7 +436,7 @@ namespace DunGen {
       sill.doorRow = door_r;
       sill.doorCol = door_c;
       sill.outRoomId = out_id;
-      
+
       return sill;
     }
 
